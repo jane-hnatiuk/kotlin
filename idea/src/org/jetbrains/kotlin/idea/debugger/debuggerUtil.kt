@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.idea.debugger
 
 import com.intellij.debugger.engine.DebugProcessImpl
+import com.intellij.debugger.engine.DebuggerManagerThreadImpl
 import com.intellij.debugger.engine.events.DebuggerCommandImpl
 import com.intellij.debugger.impl.DebuggerContextImpl
 import com.intellij.debugger.jdi.LocalVariableProxyImpl
@@ -54,13 +55,21 @@ fun isInsideInlineArgument(inlineArgument: KtFunction, location: Location, debug
     } != null
 }
 
-fun <T: Any> DebugProcessImpl.invokeInManagerThread(f: (DebuggerContextImpl) -> T?): T? {
+fun <T : Any> DebugProcessImpl.invokeInManagerThread(f: (DebuggerContextImpl) -> T?): T? {
     var result: T? = null
-    managerThread.invokeAndWait(object : DebuggerCommandImpl() {
+    val command: DebuggerCommandImpl = object : DebuggerCommandImpl() {
         override fun action() {
             result = runReadAction { f(debuggerContext) }
         }
-    })
+    }
+
+    when {
+        DebuggerManagerThreadImpl.isManagerThread() ->
+            managerThread.invoke(command)
+        else ->
+            managerThread.invokeAndWait(command)
+    }
+
     return result
 }
 
