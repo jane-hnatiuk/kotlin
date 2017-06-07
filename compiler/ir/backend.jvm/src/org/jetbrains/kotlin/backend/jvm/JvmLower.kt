@@ -47,5 +47,7 @@ class JvmLower(val context: JvmBackendContext) {
         BridgeLowering(context.state).runOnFilePostfix(irFile)
 
         TailrecLowering(context).runOnFilePostfix(irFile)
+
+        CallableReferenceLowering(context).lower(irFile)
     }
 }

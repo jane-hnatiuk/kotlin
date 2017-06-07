@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.backend.jvm
 
 import org.jetbrains.kotlin.backend.common.CommonBackendContext
+
 import org.jetbrains.kotlin.backend.common.ReflectionTypes
 import org.jetbrains.kotlin.backend.common.ir.Ir
 import org.jetbrains.kotlin.backend.common.ir.Symbols
@@ -37,7 +38,6 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi2ir.PsiSourceManager
 import org.jetbrains.kotlin.resolve.scopes.MemberScope
 import org.jetbrains.kotlin.types.KotlinType
-
 class JvmBackendContext(
         val state: GenerationState,
         psiSourceManager: PsiSourceManager,
@@ -48,10 +48,13 @@ class JvmBackendContext(
     val specialDescriptorsFactory = SpecialDescriptorsFactory(psiSourceManager, builtIns)
     override val sharedVariablesManager = JvmSharedVariablesManager(builtIns)
 
+    override val reflectionTypes: ReflectionTypes by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        ReflectionTypes(state.module, FqName("kotlin.reflect.jvm.internal"))
+    }
+
     override val ir: Ir<CommonBackendContext> = object : Ir<CommonBackendContext>(this, irModuleFragment) {
         override val symbols: Symbols<CommonBackendContext> = Symbols<CommonBackendContext>(this@JvmBackendContext, symbolTable)
     }
-
 
     private fun find(memberScope: MemberScope, className: String): ClassDescriptor {
         return find(memberScope, Name.identifier(className))
@@ -69,6 +72,7 @@ class JvmBackendContext(
         return find(state.module.getPackage(fqName.parent()).memberScope, fqName.shortName())
     }
 
+
     override fun getInternalFunctions(name: String): List<FunctionDescriptor> {
         return when (name) {
             "ThrowUninitializedPropertyAccessException" ->
@@ -78,12 +82,7 @@ class JvmBackendContext(
         }
     }
 
-
     override fun isValueType(type: KotlinType) = KotlinBuiltIns.isPrimitiveType(type)
-
-    override val reflectionTypes: ReflectionTypes by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        ReflectionTypes(state.module, FqName("kotlin.reflect.jvm.internal"))
-    }
 
     override fun log(message: () -> String) {
         print(message())
