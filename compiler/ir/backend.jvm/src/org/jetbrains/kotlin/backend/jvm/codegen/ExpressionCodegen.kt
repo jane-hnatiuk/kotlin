@@ -534,6 +534,7 @@ class ExpressionCodegen(
                 coerce(expression.argument.asmType, Type.VOID_TYPE, mv)
                 return none()
             }
+
             IrTypeOperator.IMPLICIT_CAST -> {
                 gen(expression.argument, asmType, data)
             }
@@ -566,7 +567,10 @@ class ExpressionCodegen(
                                "(Ljava/lang/Object;Ljava/lang/String;)V", false)
             }
 
-            else -> super.visitTypeOperator(expression, data)
+            IrTypeOperator.IMPLICIT_INTEGER_COERCION -> {
+                gen(expression.argument, Type.INT_TYPE, data)
+                StackValue.coerce(Type.INT_TYPE, typeMapper.mapType(expression.type), mv)
+            }
         }
         return expression.onStack
     }
