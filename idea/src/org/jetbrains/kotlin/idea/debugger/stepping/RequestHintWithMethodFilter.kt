@@ -28,7 +28,6 @@ import com.sun.jdi.request.StepRequest
 import org.intellij.lang.annotations.MagicConstant
 import java.lang.reflect.Field
 
-// TODO: Open constructor with depth
 internal class RequestHintWithMethodFilter(
         stepThread: ThreadReferenceProxyImpl,
         suspendContext: SuspendContextImpl,
@@ -38,6 +37,7 @@ internal class RequestHintWithMethodFilter(
     private var targetMethodMatched = false
 
     init {
+        // TODO: Debugger API. Open RequestHint constructor with depth
         if (depth != StepRequest.STEP_INTO) {
             findFieldWithValue(StepRequest.STEP_INTO, Integer.TYPE)?.setInt(this, depth)
         }
@@ -66,8 +66,8 @@ internal class RequestHintWithMethodFilter(
             if (filter != null &&
                 frameProxy != null &&
                 filter !is BreakpointStepMethodFilter &&
-                filter.locationMatches(context.getDebugProcess(), frameProxy.location())
-                /*&& !isTheSameFrame(context) TODO: This is a difference with super implementation */) {
+                filter.locationMatches(context.debugProcess, frameProxy.location())
+                /*&& !isTheSameFrame(context) <-- This is a difference with super implementation */) {
                 targetMethodMatched = true
                 return filter.onReached(context, this)
             }
@@ -88,4 +88,4 @@ internal class RequestHintWithMethodFilter(
     }
 }
 
-private val LOG = Logger.getInstance("#com.intellij.debugger.engine.RequestHint")
+private val LOG = Logger.getInstance(RequestHintWithMethodFilter::class.java)
