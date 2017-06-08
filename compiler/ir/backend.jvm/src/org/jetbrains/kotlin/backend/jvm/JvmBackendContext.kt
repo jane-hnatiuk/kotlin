@@ -54,6 +54,8 @@ class JvmBackendContext(
 
     override val ir: Ir<CommonBackendContext> = object : Ir<CommonBackendContext>(this, irModuleFragment) {
         override val symbols: Symbols<CommonBackendContext> = Symbols<CommonBackendContext>(this@JvmBackendContext, symbolTable)
+
+        override fun shouldGenerateHandlerParameterForDefaultBodyFun() = true
     }
 
     private fun find(memberScope: MemberScope, className: String): ClassDescriptor {
@@ -90,4 +92,6 @@ class JvmBackendContext(
 
     override val messageCollector: MessageCollector
         get() = state.configuration.getNotNull(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY)
+
+
 }
