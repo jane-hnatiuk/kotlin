@@ -24,6 +24,7 @@ import com.intellij.debugger.jdi.LocalVariableProxyImpl
 import com.sun.jdi.*
 import com.sun.tools.jdi.LocalVariableImpl
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding
+import org.jetbrains.kotlin.codegen.coroutines.DO_RESUME_METHOD_NAME
 import org.jetbrains.kotlin.idea.debugger.evaluate.KotlinDebuggerCaches
 import org.jetbrains.kotlin.idea.util.application.runReadAction
 import org.jetbrains.kotlin.load.java.JvmAbi
@@ -145,4 +146,23 @@ private class MockStackFrame(private val location: Location, private val vm: Vir
 
     override fun getArgumentValues(): List<Value> = emptyList()
     override fun virtualMachine() = vm
+}
+
+fun isInSuspendMethod(location: Location): Boolean {
+    val method = location.method()
+    val signature = method.signature()
+
+    return signature.contains("Lkotlin/coroutines/experimental/Continuation;") ||
+           (method.name() == DO_RESUME_METHOD_NAME && signature == "(Ljava/lang/Object;Ljava/lang/Throwable;)Ljava/lang/Object;")
+}
+
+fun isOnSuspendReturnOrReenter(location: Location): Boolean {
+    if (!isInSuspendMethod(location)) {
+        return false
+    }
+    return location.method().allLineLocations().firstOrNull()?.lineNumber() == location.lineNumber()
+}
+
+fun isLastLocationInMethod(location: Location): Boolean {
+    return location.method().allLineLocations().lastOrNull()?.lineNumber() == location.lineNumber()
 }

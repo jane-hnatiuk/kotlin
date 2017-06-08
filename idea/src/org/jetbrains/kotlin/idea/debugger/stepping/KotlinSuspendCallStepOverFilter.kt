@@ -41,6 +41,7 @@ import com.intellij.xdebugger.impl.breakpoints.XLineBreakpointImpl
 import com.sun.jdi.Location
 import org.jetbrains.java.debugger.breakpoints.properties.JavaLineBreakpointProperties
 import org.jetbrains.kotlin.idea.debugger.breakpoints.KotlinLineBreakpointType
+import org.jetbrains.kotlin.idea.debugger.isOnSuspendReturnOrReenter
 import org.jetbrains.kotlin.idea.refactoring.getLineEndOffset
 import org.jetbrains.kotlin.idea.util.application.runReadAction
 import java.lang.reflect.Field
@@ -49,7 +50,7 @@ class KotlinSuspendCallStepOverFilter(val line: Int, val file: PsiFile) : Method
     override fun getCallingExpressionLines(): Range<Int>? = Range(line, line) // TODO: Better default for null in isOnTheSameLine()
 
     override fun locationMatches(process: DebugProcessImpl, location: Location?): Boolean {
-        return location != null && isSuspendedLocation(location)
+        return location != null && isOnSuspendReturnOrReenter(location)
     }
 
     override fun onReached(context: SuspendContextImpl, hint: RequestHint?): Int {
@@ -57,10 +58,6 @@ class KotlinSuspendCallStepOverFilter(val line: Int, val file: PsiFile) : Method
         val firstMethodLineLocation = location.method().allLineLocations().firstOrNull() ?: return RequestHint.STOP
         createBreakpoint(context, firstMethodLineLocation.lineNumber() - 1, file)
         return RequestHint.RESUME
-    }
-
-    private fun isSuspendedLocation(location: Location): Boolean {
-        return isFirstLocationInSuspendMethod(location)
     }
 }
 

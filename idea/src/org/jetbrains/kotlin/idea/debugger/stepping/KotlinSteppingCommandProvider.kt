@@ -32,7 +32,6 @@ import com.sun.jdi.Location
 import com.sun.jdi.Method
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.builtins.isFunctionType
-import org.jetbrains.kotlin.codegen.coroutines.DO_RESUME_METHOD_NAME
 import org.jetbrains.kotlin.codegen.inline.KOTLIN_STRATA_NAME
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
@@ -40,9 +39,7 @@ import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptor
 import org.jetbrains.kotlin.idea.codeInsight.CodeInsightUtils
-import org.jetbrains.kotlin.idea.debugger.DebuggerUtils
-import org.jetbrains.kotlin.idea.debugger.invokeInManagerThread
-import org.jetbrains.kotlin.idea.debugger.ktLocationInfo
+import org.jetbrains.kotlin.idea.debugger.*
 import org.jetbrains.kotlin.idea.debugger.stepping.DexBytecode.GOTO
 import org.jetbrains.kotlin.idea.debugger.stepping.DexBytecode.MOVE
 import org.jetbrains.kotlin.idea.debugger.stepping.DexBytecode.RETURN
@@ -97,10 +94,8 @@ class KotlinSteppingCommandProvider : JvmSteppingCommandProvider() {
         }
 
         val file = sourcePosition.elementAt.containingFile
-
         val location = suspendContext.debugProcess.invokeInManagerThread { suspendContext.frameProxy?.location() } ?: return null
-
-        if (isInSuspendMethod(location) && !isFirstLocationInSuspendMethod(location) && !isLastLocationInSuspendMethod(location)) {
+        if (isInSuspendMethod(location) && !isOnSuspendReturnOrReenter(location) && !isLastLocationInMethod(location)) {
             return DebugProcessImplHelper.createStepOverCommandWithCustomFilter(
                     suspendContext, ignoreBreakpoints, KotlinSuspendCallStepOverFilter(sourcePosition.line, file))
         }
@@ -658,21 +653,3 @@ object DexBytecode {
     val GOTO = 0x28
     val MOVE = 0x01
 }
-
-fun isInSuspendMethod(location: Location): Boolean {
-    // TODO: Check method can suspend
-    val method = location.method()
-    val signature = method.signature()
-
-    return signature.contains("Lkotlin/coroutines/experimental/Continuation;") ||
-           (method.name() == DO_RESUME_METHOD_NAME && signature == "(Ljava/lang/Object;Ljava/lang/Throwable;)Ljava/lang/Object;")
-}
-
-fun isFirstLocationInSuspendMethod(location: Location): Boolean {
-    return location.method().allLineLocations().firstOrNull()?.lineNumber() == location.lineNumber()
-}
-
-fun isLastLocationInSuspendMethod(location: Location): Boolean {
-    return location.method().allLineLocations().lastOrNull()?.lineNumber() == location.lineNumber()
-}
-
