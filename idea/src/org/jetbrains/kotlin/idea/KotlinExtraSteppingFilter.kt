@@ -56,7 +56,14 @@ class KotlinExtraSteppingFilter : ExtraSteppingFilter {
                 } ?: return false
 
         if (isOnSuspendReturnOrReenter(location)) {
-            return true
+            val allLineLocations = location.method().allLineLocations()
+            val firstLine = allLineLocations.firstOrNull()?.lineNumber()
+            val lastLine = allLineLocations.lastOrNull()?.lineNumber()
+
+            // Ignore one-line suspend functions
+            if (firstLine != null && firstLine != lastLine) {
+                return true
+            }
         }
 
         val settings = DebuggerSettings.getInstance()
