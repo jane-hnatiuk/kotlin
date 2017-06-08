@@ -55,7 +55,7 @@ open class Symbols<out T: CommonBackendContext>(val context: T, private val symb
             context.getClass(FqName("java.lang.StringBuilder")) as ClassDescriptor
     )
 
-    //val defaultArgumentMarker = symbolTable.referenceClass(context.getInternalClass("DefaultArgumentMarker"))
+    val defaultArgumentMarker = symbolTable.referenceClass(context.getInternalClass("DefaultConstructorMarker"))
 
     val any = symbolTable.referenceClass(builtIns.any)
     val unit = symbolTable.referenceClass(builtIns.unit)
