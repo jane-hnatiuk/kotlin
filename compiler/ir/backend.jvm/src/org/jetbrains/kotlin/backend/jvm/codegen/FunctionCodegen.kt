@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.backend.jvm.codegen
 
+import org.jetbrains.kotlin.backend.common.lower.DECLARATION_ORIGIN_FUNCTION_FOR_DEFAULT_PARAMETER
 import org.jetbrains.kotlin.backend.jvm.descriptors.JvmDescriptorWithExtraFlags
 import org.jetbrains.kotlin.backend.jvm.lower.InitializersLowering
 import org.jetbrains.kotlin.codegen.*
@@ -23,6 +24,7 @@ import org.jetbrains.kotlin.codegen.AsmUtil.isStaticMethod
 import org.jetbrains.kotlin.codegen.FunctionCodegen
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.descriptors.ClassConstructorDescriptor
+import org.jetbrains.kotlin.descriptors.ConstructorDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.util.dump
@@ -52,11 +54,13 @@ class FunctionCodegen(val irFunction: IrFunction, val classCodegen: ClassCodegen
     }
 
     private fun doGenerate() {
-        val signature = classCodegen.typeMapper.mapSignatureWithGeneric(descriptor, OwnerKind.IMPLEMENTATION)
-        val isStatic = isStaticMethod(OwnerKind.getMemberOwnerKind(classCodegen.descriptor), descriptor) ||
-                       DescriptorUtils.isStaticDeclaration(descriptor)
-        val frameMap = createFrameMapWithReceivers(classCodegen.state, descriptor, signature, isStatic)
+        val isDefaultFunctionBody = irFunction.origin == DECLARATION_ORIGIN_FUNCTION_FOR_DEFAULT_PARAMETER && irFunction.descriptor !is ConstructorDescriptor
+        val signature = classCodegen.typeMapper.mapSignatureWithGeneric(descriptor, if (isDefaultFunctionBody) OwnerKind.DEFAULT_IMPLS else OwnerKind.IMPLEMENTATION)
 
+        val isStatic = isStaticMethod(OwnerKind.getMemberOwnerKind(classCodegen.descriptor), descriptor) ||
+                       DescriptorUtils.isStaticDeclaration(descriptor) ||
+                       isDefaultFunctionBody
+        val frameMap = createFrameMapWithReceivers(classCodegen.state, descriptor, signature, isStatic, isDefaultFunctionBody)
 
         var flags = AsmUtil.getMethodAsmFlags(descriptor, OwnerKind.IMPLEMENTATION, state).or(if (isStatic) Opcodes.ACC_STATIC else 0).xor(
                 if (DescriptorUtils.isAnnotationClass(descriptor.containingDeclaration)) Opcodes.ACC_FINAL else 0/*TODO*/
@@ -106,10 +110,11 @@ fun createFrameMapWithReceivers(
         state: GenerationState,
         function: FunctionDescriptor,
         signature: JvmMethodSignature,
-        isStatic: Boolean
+        isStatic: Boolean,
+        isDefaultImpls: Boolean = false
 ): FrameMap {
     val frameMap = FrameMap()
-    if (!isStatic) {
+    if (!isStatic || isDefaultImpls) {
         val descriptorForThis =
                 if (function is ClassConstructorDescriptor)
                     function.containingDeclaration.thisAsReceiverParameter
@@ -130,6 +135,7 @@ fun createFrameMapWithReceivers(
             }
         }
         else if (parameter.kind != JvmMethodParameterKind.VALUE) {
+            if (!isDefaultImpls || parameter.kind != JvmMethodParameterKind.THIS)
             frameMap.enterTemp(parameter.asmType)
         }
     }
