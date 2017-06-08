@@ -29,6 +29,11 @@ class JvmLower(val context: JvmBackendContext) {
         LateinitLowering(context).lower(irFile)
         ConstAndJvmFieldPropertiesLowering().lower(irFile)
         PropertiesLowering().lower(irFile)
+
+        //Should be before interface lowering
+        DefaultArgumentStubGenerator(context).runOnFilePostfix(irFile)
+        DefaultFunctionBodyLowering(context.state).runOnFilePostfix(irFile)
+
         InterfaceLowering(context.state).runOnFilePostfix(irFile)
         InterfaceDelegationLowering(context.state).runOnFilePostfix(irFile)
         SharedVariablesLowering(context).runOnFilePostfix(irFile)
@@ -43,7 +48,7 @@ class JvmLower(val context: JvmBackendContext) {
         BridgeLowering(context.state).runOnFilePostfix(irFile)
 
         TailrecLowering(context).runOnFilePostfix(irFile)
-        DefaultArgumentStubGenerator(context).runOnFilePostfix(irFile)
+
 
         CallableReferenceLowering(context).lower(irFile)
     }

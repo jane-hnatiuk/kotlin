@@ -54,13 +54,16 @@ class FunctionCodegen(val irFunction: IrFunction, val classCodegen: ClassCodegen
     }
 
     private fun doGenerate() {
-        val isDefaultFunctionBody = irFunction.origin == DECLARATION_ORIGIN_FUNCTION_FOR_DEFAULT_PARAMETER && irFunction.descriptor !is ConstructorDescriptor
-        val signature = classCodegen.typeMapper.mapSignatureWithGeneric(descriptor, if (isDefaultFunctionBody) OwnerKind.DEFAULT_IMPLS else OwnerKind.IMPLEMENTATION)
+        val signature = classCodegen.typeMapper.mapSignatureWithGeneric(
+                descriptor,
+                OwnerKind.IMPLEMENTATION,
+                false
+        )
 
         val isStatic = isStaticMethod(OwnerKind.getMemberOwnerKind(classCodegen.descriptor), descriptor) ||
-                       DescriptorUtils.isStaticDeclaration(descriptor) ||
-                       isDefaultFunctionBody
-        val frameMap = createFrameMapWithReceivers(classCodegen.state, descriptor, signature, isStatic, isDefaultFunctionBody)
+                       DescriptorUtils.isStaticDeclaration(descriptor)
+
+        val frameMap = createFrameMapWithReceivers(classCodegen.state, descriptor, signature, isStatic, false)
 
         var flags = AsmUtil.getMethodAsmFlags(descriptor, OwnerKind.IMPLEMENTATION, state).or(if (isStatic) Opcodes.ACC_STATIC else 0).xor(
                 if (DescriptorUtils.isAnnotationClass(descriptor.containingDeclaration)) Opcodes.ACC_FINAL else 0/*TODO*/
