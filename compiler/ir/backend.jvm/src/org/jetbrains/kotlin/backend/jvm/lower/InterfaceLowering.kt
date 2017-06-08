@@ -103,10 +103,11 @@ class InterfaceLowering(val state: GenerationState) : ToStaticLowering(), ClassL
 }
 
 
-class DefaultFunctionBodyLowering(val state: GenerationState) : ToStaticLowering(), ClassLoweringPass {
+class StaticDefaultFunctionBodyLowering(val state: GenerationState) : ToStaticLowering(), ClassLoweringPass {
 
     override fun lower(irClass: IrClass) {
-        if (!DescriptorUtils.isClass(irClass.descriptor)) {
+        val descriptor = irClass.descriptor
+        if (DescriptorUtils.isInterface(descriptor) || DescriptorUtils.isAnnotationClass(descriptor)) {
             return
         }
        irClass.accept(this, null)
